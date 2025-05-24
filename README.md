@@ -1,3 +1,6 @@
+workflow-examples
+![image](https://github.com/user-attachments/assets/6d0a02e6-a92e-40b3-9f1d-156fde787ff4)
+
 English | 插件说明（English version）
 
 ComfyUI Merge Plugin
