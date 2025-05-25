@@ -1,4 +1,4 @@
-// custom_nodes/comfyui-merge-lora/web/lora_folder_filter.js
+// custom_nodes/comfyui-merge/web/lora_folder_filter.js
 import { ComfyApp, app } from "../../../scripts/app.js";
 
 app.registerExtension({
