@@ -13,11 +13,10 @@ except ImportError:
     safe_load = None
     safe_save = None
 
-# 获取LoRA路径列表中的第一个路径
+# 获取LoRA路径列表，[dir,suffix]
 lora_base_path = folder_paths.get_folder_paths("loras")[0]
 OUTPUT_DIR = os.path.join(lora_base_path, "merged-loras")
 # print(OUTPUT_DIR)  # ['/path/to/ComfyUI/models/loras/merged-loras'] 
-
 
 
 class OnlyLoadLoRAsModel:
@@ -80,7 +79,7 @@ class MergeLoRAsKohyaSSLike:
         }
 
     RETURN_TYPES = ("MODEL",)
-    RETURN_NAMES = ("model",)
+    RETURN_NAMES = ("merged_model",)
     FUNCTION = "merge"
     CATEGORY = "LoRA"
 
@@ -170,8 +169,8 @@ class SaveLoRAModels:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "lora_dict": ("MODEL", ),
-                "output_path": ("STRING", {"default": "merged_lora.safetensors"}),
+                "merged_model": ("MODEL", ),
+                "modeloutput": ("STRING", {"default": "merged_lora.safetensors"}),
             }
         }
     RETURN_TYPES = ("STRING",)
@@ -179,17 +178,17 @@ class SaveLoRAModels:
     FUNCTION = "save"
     CATEGORY = "LoRA"
 
-    def save(self, lora_dict, output_path):
-        if not os.path.isabs(output_path):
+    def save(self, merged_model, modeloutput):
+        if not os.path.isabs(modeloutput):
             if not os.path.exists(OUTPUT_DIR):
                 os.makedirs(OUTPUT_DIR)
-            output_path = os.path.join(OUTPUT_DIR, output_path)
-        if output_path.endswith('.safetensors') and safetensors_available and safe_save is not None:
-            safe_save(lora_dict, output_path)
+            modeloutput = os.path.join(OUTPUT_DIR, modeloutput)
+        if modeloutput.endswith('.safetensors') and safetensors_available and safe_save is not None:
+            safe_save(merged_model, modeloutput)
         else:
-            torch.save(lora_dict, output_path)
-        print(f"LoRA model saved to {output_path}")
-        return (output_path,)
+            torch.save(merged_model, modeloutput)
+        print(f"LoRA model saved to {modeloutput}")
+        return (modeloutput,)
 
 
 NODE_CLASS_MAPPINGS = {
