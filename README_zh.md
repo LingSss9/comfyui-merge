@@ -4,7 +4,7 @@
 # ComfyUI模型融合插件    
 本插件是为 ComfyUI 开发的LoRA模型融合插件，可支持最多4个LoRA模型融合，逻辑借鉴WebUI中的SuperMerger插件，重点优化合并顺序影响与权重分配失衡的问题。   
 ### 工作流预览：    
-![插件预览](https://github.com/user-attachments/assets/6d0a02e6-a92e-40b3-9f1d-156fde787ff4 )    
+![插件预览](https://github.com/user-attachments/assets/6437ef7b-25b5-46a8-9253-13c7eba6a6a4)
 
 ## 插件特色
 - 支持2～4个LoRA模型融合
