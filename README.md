@@ -28,4 +28,4 @@ An advanced plugin for ComfyUI, designed for merging up to 4 LoRA models with ba
 4. Output will be a single LoRA-style model node usable in downstream workflows.
 
 Workflow-examples:      
-![Plugin Preview](https://github.com/user-attachments/assets/6d0a02e6-a92e-40b3-9f1d-156fde787ff4)
+![Plugin Preview](https://github.com/user-attachments/assets/6437ef7b-25b5-46a8-9253-13c7eba6a6a4)
