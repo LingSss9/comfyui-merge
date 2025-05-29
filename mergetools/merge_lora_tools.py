@@ -3,23 +3,36 @@ import os
 import math
 import folder_paths
 
+# -------------------------------------------------------------------
+# Optional safetensors support flag (keep both names for legacy checks)
+# -------------------------------------------------------------------
 try:
     from safetensors.torch import load_file as safe_load, save_file as safe_save
     SAFETENSORS = True
-    safetensors_available = True
+    safetensors_available = True   # legacy alias
 except ImportError:
     SAFETENSORS = False
     safetensors_available = False
     safe_load = None
     safe_save = None
 
-# 获取LoRA路径列表，[dir,suffix]
+# -------------------------------------------------------------------
+# Build default output directory: <ComfyUI>/models/loras/merged-loras
+# -------------------------------------------------------------------
 lora_base_path = folder_paths.get_folder_paths("loras")[0]
 OUTPUT_DIR = os.path.join(lora_base_path, "merged-loras")
 # print(OUTPUT_DIR)  # ['/path/to/ComfyUI/models/loras/merged-loras'] 
 
-
+# =============================================================================
+# OnlyLoadLoRAsModel
+# =============================================================================
 class OnlyLoadLoRAsModel:
+    """Load a single LoRA file from <ComfyUI>/models/loras.
+
+    * `category_filter` – folder drop‑down (handled by front‑end JS)
+    * `lora_name`       – file selector (full list, filtered on the client)
+    """
+
     @classmethod
     def INPUT_TYPES(cls):
         names = folder_paths.get_filename_list("loras")
@@ -36,7 +49,7 @@ class OnlyLoadLoRAsModel:
     CATEGORY = "LoRA"
 
     def load(self, lora_name, category_filter='All'):
-        # 目录过滤逻辑完全由前端 JS 处理；后端只负责加载
+        # Front‑end JS handles the folder filtering; the back‑end only loads the file.
         lora_path = folder_paths.get_full_path('loras', lora_name)
         if not lora_path or not os.path.exists(lora_path):
             raise FileNotFoundError(lora_name)
@@ -49,12 +62,15 @@ class OnlyLoadLoRAsModel:
             state_dict = torch.load(lora_path, map_location='cpu')
         return (state_dict,)
 
-
+# =============================================================================
+# MergeLoRAsKohyaSSLike
+# =============================================================================
 class MergeLoRAsKohyaSSLike:
-    """Merge multiple LoRA state-dicts replicating kohya-ss / SuperMerger logic.
-    - **Order-independent**: A+B == B+A when ratios相同
-    - Optional `force_same_strength=yes` ⇒ ratio→√ratio 以对齐 WebUI Strength 语义
-    - 自动按 α / base_α 缩放各模块权重，实现更均衡的特征保留
+    """Merge multiple LoRA state‑dicts (kohya‑ss / SuperMerger style).
+
+    * **Order‑independent** – A+B == B+A when ratios are the same.
+    * `force_same_strength=yes`  ⇒   ratio → √ratio (matches Web‑UI "Strength").
+    * Per‑module scaling by √(αᵢ / avgα) for more balanced feature retention.
     """
 
     @classmethod
@@ -83,13 +99,14 @@ class MergeLoRAsKohyaSSLike:
     FUNCTION = "merge"
     CATEGORY = "LoRA"
 
+    # ---------- helpers ----------
     def _safe_scalar(self, t: torch.Tensor):
         """Return float value regardless of dtype/shape."""
         if t.numel() == 1:
             return t.float().item()
-        # fallback: mean
         return t.float().mean().item()
-
+    
+    # ---------- main ----------
     def merge(self, model1, weight1, model2, weight2,
               weight3, weight4, force_same_strength, allow_overwrite,
               save_dtype, reset_dim, model3=None, model4=None):
@@ -103,9 +120,9 @@ class MergeLoRAsKohyaSSLike:
         # remove zero-weight items
         models_with_w = [(sd, w) for sd, w in models_with_w if w != 0]
 
-        # --- 1. Gather per-module α and dim info, build base_α (order-independent) ---
-        module_alphas_list = []  # list[dict[module->α]]
-        merged_base_alpha = {}   # module -> sum,count  then average
+        # ---- gather α for each module ----
+        module_alphas_list = []
+        merged_base_alpha = {}
 
         for sd, _ in models_with_w:
             alphas = {}
@@ -163,7 +180,9 @@ class MergeLoRAsKohyaSSLike:
 
         return (merged_sd, )
 
-
+# =============================================================================
+# SaveLoRAModels
+# =============================================================================
 class SaveLoRAModels:
     @classmethod
     def INPUT_TYPES(cls):
@@ -189,15 +208,17 @@ class SaveLoRAModels:
             torch.save(merged_model, modeloutput)
         print(f"LoRA model saved to {modeloutput}")
         return (modeloutput,)
-
-
+    
+# =============================================================================
+# Node registration
+# =============================================================================
 NODE_CLASS_MAPPINGS = {
     "OnlyLoadLoRAsModel": OnlyLoadLoRAsModel,
     "MergeLoRAsKohyaSSLike": MergeLoRAsKohyaSSLike,
     "SaveLoRAModels": SaveLoRAModels,
 }
 NODE_DISPLAY_NAME_MAPPINGS = {
-    "OnlyLoadLoRAsModel": "仅加载LoRA模型",
-    "MergeLoRAsKohyaSSLike": "LoRA模型合并",
-    "SaveLoRAModels": "保存LoRA模型",
+    "OnlyLoadLoRAsModel": "Load LoRA Model(merge)",
+    "MergeLoRAsKohyaSSLike": "Merge LoRA Models(merge)",
+    "SaveLoRAModels": "Save LoRA Model(merge)",
 }
