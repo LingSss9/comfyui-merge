@@ -1,0 +1,15 @@
+[project]
+name = "merge"
+description = "Merge up to 4 LoRA models with balanced, order-independent logic. Inspired by WebUI SuperMerger."
+version = "1.0.0"
+license = {file = "LICENSE"}
+
+[project.urls]
+Repository = "https://github.com/LingSss9/comfyui-merge"
+#  Used by Comfy Registry https://registry.comfy.org
+
+[tool.comfy]
+PublisherId = ""
+DisplayName = "comfyui-merge"
+Icon = ""
+includes = []
