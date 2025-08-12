@@ -62,6 +62,75 @@ class OnlyLoadLoRAsModel:
             state_dict = torch.load(lora_path, map_location='cpu')
         return (state_dict,)
 
+
+# =============================================================================
+# LoadLoRAMenu (apply to MODEL with strength; with folder filter menu)
+# =============================================================================
+
+class LoadLoRAMenu:
+    """Load and apply a LoRA to a MODEL with a strength slider.
+    Adds two things compared with *OnlyLoadLoRAsModel*:
+      - a left-side **model** input
+      - a **strength_model** slider
+    The folder filtering UI is handled by the web script (same keys: `category_filter` + `lora_name`).
+    """
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        names = folder_paths.get_filename_list("loras")
+        dirs  = sorted({os.path.dirname(p) for p in names if os.path.dirname(p)})
+        return {
+            "required": {
+                "model": ("MODEL",),
+                "category_filter": (["All"] + dirs,),
+                "lora_name": (names,),
+                "strength_model": ("FLOAT", {"default": 1.0, "min": -2.0, "max": 2.0, "step": 0.01}),
+            }
+        }
+
+    RETURN_TYPES = ("MODEL",)
+    RETURN_NAMES = ("model",)
+    FUNCTION = "apply"
+    CATEGORY = "LoRA"
+
+    
+    def apply(self, model, lora_name, strength_model=1.0, category_filter='All'):
+        # Resolve file path
+        lora_path = folder_paths.get_full_path('loras', lora_name)
+        if not lora_path or not os.path.exists(lora_path):
+            raise FileNotFoundError(lora_name)
+
+        try:
+            from comfy import sd as comfy_sd
+        except Exception as e:
+            raise ImportError("Cannot import comfy.sd helper: " + str(e))
+
+        # Helper: load to state-dict (for Comfy versions that require dict)
+        def _load_state(p):
+            if p.endswith('.safetensors'):
+                if not SAFETENSORS or safe_load is None:
+                    raise ImportError('pip install safetensors to load .safetensors')
+                return safe_load(p, device='cpu')
+            else:
+                import torch
+                return torch.load(p, map_location='cpu')
+
+        # Try both calling conventions for better compatibility.
+        # 1) Prefer passing dict (newer implementations often expect a dict)
+        last_err = None
+        try:
+            sd_dict = _load_state(lora_path)
+            new_model, _ = comfy_sd.load_lora_for_models(model, None, sd_dict, strength_model, 0.0)
+            return (new_model,)
+        except Exception as e:
+            last_err = e
+            # Fallback 2) pass file path string
+            try:
+                new_model, _ = comfy_sd.load_lora_for_models(model, None, lora_path, strength_model, 0.0)
+                return (new_model,)
+            except Exception as e2:
+                raise RuntimeError(f"load_lora_for_models failed (dict -> {last_err}); (path -> {e2})")
+
 # =============================================================================
 # MergeLoRAsKohyaSSLike
 # =============================================================================
@@ -214,11 +283,13 @@ class SaveLoRAModels:
 # =============================================================================
 NODE_CLASS_MAPPINGS = {
     "OnlyLoadLoRAsModel": OnlyLoadLoRAsModel,
+    "LoadLoRAMenu": LoadLoRAMenu,
     "MergeLoRAsKohyaSSLike": MergeLoRAsKohyaSSLike,
     "SaveLoRAModels": SaveLoRAModels,
 }
 NODE_DISPLAY_NAME_MAPPINGS = {
     "OnlyLoadLoRAsModel": "Load LoRA Model(merge)",
+    "LoadLoRAMenu": "load lora (menu)",
     "MergeLoRAsKohyaSSLike": "Merge LoRA Models(merge)",
     "SaveLoRAModels": "Save LoRA Model(merge)",
 }
