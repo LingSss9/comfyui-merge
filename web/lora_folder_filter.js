@@ -5,7 +5,7 @@ app.registerExtension({
   name: "Comfy.LoraFolderFilter",
 
   nodeCreated(node, app) {
-    if (node.comfyClass !== "OnlyLoadLoRAsModel") return;
+    if (node.comfyClass !== "OnlyLoadLoRAsModel" && node.comfyClass !== "LoadLoRAMenu") return;
 
     console.log("[LoRA folder filter] extension loaded for node:", node.comfyClass);
 
